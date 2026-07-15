@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        getUserRole() == role;
+    }
+    
+    function isAdminOrSuperAdmin() {
+      return hasRole('admin') || hasRole('superadmin');
+    }
+
+    function hasPlaceholder() {
+      return request.auth.token.email != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.token.email.toLowerCase()));
+    }
+    
+    function getPlaceholderRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.token.email.toLowerCase())).data.role;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        (request.auth.token.email != null && request.auth.token.email.toLowerCase() == userId.toLowerCase()) ||
+        isAdminOrSuperAdmin()
+      );
+      
+      allow create: if isAuthenticated() && (
+        // Admin or Superadmin can create any user/placeholder with any role
+        isAdminOrSuperAdmin() ||
+        // User creating their own UID-keyed document
+        // If they have an email-keyed placeholder, they must inherit its role (e.g. during migration).
+        // Otherwise, they can only create it with the default "user" role.
+        (request.auth.uid == userId && (
+          (hasPlaceholder() && request.resource.data.role == getPlaceholderRole()) ||
+          (!hasPlaceholder() && request.resource.data.role == 'user')
+        )) ||
+        // User pre-creating their own email-keyed placeholder (must start as "user" unless an admin is writing it)
+        (request.auth.token.email != null && request.auth.token.email.toLowerCase() == userId.toLowerCase() &&
+         request.resource.data.role == 'user')
+      );
+      
+      allow update: if isAuthenticated() && (
+        // Superadmins can update any field including role (role changes are audit-logged by the client)
+        hasRole('superadmin') ||
+        // Admins can update user docs (like client's iframeUrl) but CANNOT change role
+        (isAdminOrSuperAdmin() &&
+         request.resource.data.role == resource.data.role)
+      );
+      
+      // Safe deletion rule: allows users to delete pending email-keyed placeholder documents that match their email address.
+      // Since real user documents are keyed by UIDs (which do not match email patterns), this cannot be used to delete real accounts.
+      allow delete: if isAuthenticated() && (
+        (request.auth.token.email != null && request.auth.token.email.toLowerCase() == userId.toLowerCase()) ||
+        isAdminOrSuperAdmin()
+      );
+    }
+    
+    match /auditLogs/{logId} {
+      allow read: if isAdminOrSuperAdmin();
+      // Admins/Superadmins can write any audit log.
+      // Authenticated users can write audit logs only when logging their own actions (e.g. user_signed_in).
+      allow create: if isAuthenticated() && (
+        isAdminOrSuperAdmin() ||
+        request.resource.data.operatorUid == request.auth.uid
+      );
+      allow update, delete: if false;
+    }
+    
+    match /user_dashboards/{email} {
+      allow read: if isAuthenticated() && (
+        request.auth.token.email.toLowerCase() == email.toLowerCase() ||
+        isAdminOrSuperAdmin()
+      );
+      allow write: if isAdminOrSuperAdmin();
+    }
+  }
+}
