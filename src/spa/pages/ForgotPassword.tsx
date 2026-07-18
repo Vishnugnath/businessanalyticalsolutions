@@ -47,7 +47,7 @@ export default function ForgotPassword() {
       } else if (code === "auth/invalid-email") {
         msg = "The email address is invalid.";
       } else if (code === "auth/too-many-requests") {
-        msg = "Too many password recovery requests. Please wait before trying againnnnn.";
+        msg = "Too many password recovery requests. Please wait before trying again.";
       }
       
       setErr(msg);
