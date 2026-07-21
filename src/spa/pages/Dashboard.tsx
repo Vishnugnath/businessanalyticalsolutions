@@ -110,12 +110,19 @@ export default function Dashboard() {
               </div>
             )}
             <div className="w-full overflow-x-auto p-3 sm:p-4">
-              <div className="rounded-lg overflow-hidden">
+              <div 
+                className="relative rounded-lg overflow-hidden aspect-video w-full"
+                style={{ minWidth: "1024px" }}
+              >
                 <iframe
                   title="Client Dashboard"
                   src={iframeUrl}
-                  className="w-full h-[85vh] border-0 block"
-                  style={{ minWidth: "1024px" }}
+                  className="absolute top-0 left-0 w-full border-0 block"
+                  style={{ 
+                    minWidth: "1024px",
+                    height: "calc(100% + 56px)" 
+                  }}
+                  scrolling="no"
                   allowFullScreen
                 />
               </div>
