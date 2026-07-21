@@ -8,7 +8,8 @@ export type AuditAction =
   | "iframe_changed"
   | "role_changed"
   | "user_signed_in"
-  | "google_sheet_changed";
+  | "google_sheet_changed"
+  | "password_changed";
 
 /**
  * Write a structured audit log entry to the `auditLogs` Firestore collection.

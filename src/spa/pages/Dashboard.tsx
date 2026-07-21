@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "@/firebase/config";
 import { useAuth } from "@/spa/AuthContext";
 import { Spinner } from "@/spa/components/Spinner";
-import { BarChart3, LogOut, LineChart, MailQuestion, Radio, FileSpreadsheet, ExternalLink } from "lucide-react";
+import { BarChart3, LogOut, LineChart, MailQuestion, Radio, FileSpreadsheet, ExternalLink, KeyRound } from "lucide-react";
 import { ThemeToggle } from "@/spa/ThemeContext";
+import ChangePasswordModal from "@/spa/components/ChangePasswordModal";
 
 function FontsAndMotion() {
   return (
@@ -20,6 +22,9 @@ function FontsAndMotion() {
 export default function Dashboard() {
   const { user, iframeUrl, googleSheetEnabled, googleSheetUrl, loading } = useAuth();
   const navigate = useNavigate();
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+
+  const isPasswordUser = user?.providerData.some((p) => p.providerId === "password");
 
   console.log("Dashboard configuration load:", { googleSheetEnabled, googleSheetUrl });
 
@@ -62,6 +67,14 @@ export default function Dashboard() {
               </span>
             )}
             <ThemeToggle />
+            {isPasswordUser && (
+              <button
+                onClick={() => setIsChangePasswordOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-white/10 hover:border-blue-400/40 hover:text-blue-600 dark:hover:text-blue-300 transition cursor-pointer"
+              >
+                <KeyRound className="h-3.5 w-3.5" /> Change password
+              </button>
+            )}
             <button
               onClick={onSignOut}
               className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 hover:bg-red-50 dark:hover:bg-white/10 hover:border-red-400/40 hover:text-red-600 dark:hover:text-red-300 transition"
@@ -132,6 +145,8 @@ export default function Dashboard() {
           <EmptyPortal />
         )}
       </main>
+
+      <ChangePasswordModal isOpen={isChangePasswordOpen} onClose={() => setIsChangePasswordOpen(false)} />
     </div>
   );
 }
